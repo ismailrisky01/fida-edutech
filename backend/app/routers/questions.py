@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
-from ..models.database import SessionLocal, DBQuestion, DBUser
+from ..models.database import SessionLocal, DBQuestion, DBUser, DBSubtopic
 from ..schemas.question import QuestionCreate, QuestionUpdate, QuestionResponse
 from ..routers.auth import get_current_user
 
@@ -112,11 +112,27 @@ async def import_questions_json(
         if not isinstance(data, list):
             raise HTTPException(status_code=400, detail="JSON must be an array of questions")
             
+        # Get valid subtopics from curriculum
+        valid_subtopics = {s.title.lower() for s in db.query(DBSubtopic).all()}
+            
         inserted_count = 0
+        skipped_count = 0
         for item in data:
+            if 'materi' in item:
+                item['topic'] = item.pop('materi')
+            if 'submateri' in item:
+                item['subtopic'] = item.pop('submateri')
+                
             # Validate with Pydantic
             try:
                 question_data = QuestionCreate(**item)
+                
+                # Check if subtopic is registered
+                sub = question_data.subtopic
+                if sub and sub.lower() not in valid_subtopics:
+                    skipped_count += 1
+                    continue
+                    
                 db_question = DBQuestion(**question_data.model_dump(), created_by=current_user.id)
                 db.add(db_question)
                 inserted_count += 1
@@ -126,7 +142,7 @@ async def import_questions_json(
                 raise HTTPException(status_code=400, detail=f"Invalid question data in array: {str(e)}")
                 
         db.commit()
-        return {"message": "Import successful", "count": inserted_count}
+        return {"message": "Import successful", "count": inserted_count, "skipped": skipped_count}
         
     except json.JSONDecodeError:
         raise HTTPException(status_code=400, detail="Invalid JSON file format")

@@ -37,6 +37,7 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
   const [questions, setQuestions] = useState<ManualQuestion[]>([]);
   const [isQuestionModalOpen, setIsQuestionModalOpen] = useState(false);
   const [editingQuestion, setEditingQuestion] = useState<ManualQuestion | null>(null);
+  const [filterSubtopic, setFilterSubtopic] = useState<string>('');
   const [questionForm, setQuestionForm] = useState<Omit<ManualQuestion, 'id' | 'created_at'>>({
     topic: '', subtopic: '', difficulty: 'Mudah', question_text: '', option_a: '', option_b: '', option_c: '', option_d: '', correct_option: 'A', explanation: ''
   });
@@ -145,11 +146,16 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
   const handleImportJson = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const res = await api.importQuestionsJson(file);
-      if (res) {
-        alert(`Berhasil mengimport ${res.count} soal.`);
-        fetchData();
+      const response = await api.importQuestionsJson(file);
+      
+      let message = `Berhasil mengimpor ${response.count} soal.`;
+      if (response.skipped && response.skipped > 0) {
+        message += `\nSebanyak ${response.skipped} soal diabaikan karena submaterinya tidak terdaftar di Kurikulum.`;
       }
+      alert(message);
+      
+      fetchData();
+      
       // reset file input
       if (importJsonRef.current) importJsonRef.current.value = '';
     }
@@ -158,8 +164,8 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
   const handleDownloadTemplate = () => {
     const template = [
       {
-        topic: "Matematika Logika & Olympiad",
-        subtopic: "Sesi 1: Dasar Logika",
+        materi: "Matematika Logika & Olympiad",
+        submateri: "Sesi 1: Dasar Logika",
         difficulty: "Mudah",
         question_text: "Pertanyaan contoh di sini...",
         option_a: "Pilihan A",
@@ -335,7 +341,7 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
   };
 
   const handleDeleteTopic = async (topic: Topic) => {
-    if (confirm(`Hapus topik "${topic.name}" beserta semua submateri di dalamnya?`)) {
+    if (confirm(`Hapus materi "${topic.name}" beserta semua submateri di dalamnya?`)) {
       await api.deleteTopic(topic.id);
       await fetchData();
     }
@@ -502,7 +508,7 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
                   </div>
                   <div>
                     <p className="text-text-muted font-label-sm uppercase tracking-wider mb-1">Kurikulum Master</p>
-                    <p className="font-headline-md text-text-heading">{curriculumTopics.length} Topik</p>
+                    <p className="font-headline-md text-text-heading">{curriculumTopics.length} Materi</p>
                   </div>
                 </div>
               </div>
@@ -771,15 +777,15 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
                     Manajemen Kurikulum Master
                   </h3>
                   <button onClick={() => { setEditingTopic(null); setTopicForm({ name: '', description: '', level: '' }); setTopicModalOpen(true); }} className="px-4 py-2 bg-tertiary text-white font-label-md rounded-xl hover:scale-[1.02] transition-transform shadow-sm flex items-center gap-1">
-                    <span className="material-symbols-outlined text-[18px]">add</span> Tambah Topik
+                    <span className="material-symbols-outlined text-[18px]">add</span> Tambah Materi
                   </button>
                 </div>
 
                 {topicModalOpen && (
                   <div className="p-5 border border-tertiary/30 bg-tertiary/5 rounded-2xl">
-                    <h4 className="font-label-md text-text-heading mb-3">{editingTopic ? 'Edit Topik' : 'Tambah Topik Baru'}</h4>
+                    <h4 className="font-label-md text-text-heading mb-3">{editingTopic ? 'Edit Materi' : 'Tambah Materi Baru'}</h4>
                     <form onSubmit={handleSaveTopic} className="flex flex-col gap-3">
-                      <input type="text" placeholder="Nama Topik (misal: Matematika 1 SD)" value={topicForm.name} onChange={e => setTopicForm({...topicForm, name: e.target.value})} className="p-3 border border-border-subtle rounded-xl text-sm bg-surface-container-lowest focus:border-tertiary outline-none" required />
+                      <input type="text" placeholder="Nama Materi (misal: Matematika 1 SD)" value={topicForm.name} onChange={e => setTopicForm({...topicForm, name: e.target.value})} className="p-3 border border-border-subtle rounded-xl text-sm bg-surface-container-lowest focus:border-tertiary outline-none" required />
                       <input type="text" placeholder="Deskripsi Singkat" value={topicForm.description} onChange={e => setTopicForm({...topicForm, description: e.target.value})} className="p-3 border border-border-subtle rounded-xl text-sm bg-surface-container-lowest focus:border-tertiary outline-none" />
                       <div className="flex gap-2">
                         <button type="submit" className="px-5 py-2 bg-tertiary text-white font-label-md rounded-xl">Simpan</button>
@@ -864,7 +870,17 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  <input 
+                  <select 
+                    value={filterSubtopic} 
+                    onChange={e => setFilterSubtopic(e.target.value)}
+                    className="bg-surface border border-border-subtle rounded-full px-4 py-2.5 text-sm font-label-md focus:outline-none focus:ring-2 focus:ring-secondary/50 text-text-heading shadow-sm"
+                  >
+                    <option value="">Semua Submateri</option>
+                    {Array.from(new Set(questions.map(q => q.subtopic).filter(Boolean))).map(sub => (
+                      <option key={sub} value={sub}>{sub}</option>
+                    ))}
+                  </select>
+                  <input  
                     type="file" 
                     accept=".json" 
                     ref={importJsonRef}
@@ -896,7 +912,7 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {questions.map((q) => (
+                  {questions.filter(q => filterSubtopic ? q.subtopic === filterSubtopic : true).map((q) => (
                     <div key={q.id} className="bg-surface-container-lowest border border-border-subtle rounded-2xl p-6 shadow-sm flex flex-col hover:shadow-md transition-shadow">
                       <div className="flex justify-between items-start mb-4">
                         <div className="space-y-1">
@@ -904,8 +920,8 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
                             {q.topic}
                           </span>
                           <span className={`inline-block ml-2 px-3 py-1 text-xs font-semibold rounded-full uppercase tracking-wide ${
-                            q.difficulty === 'Mudah' ? 'bg-green-100 text-green-700' : 
-                            q.difficulty === 'Menengah' ? 'bg-yellow-100 text-yellow-700' : 
+                            q.difficulty?.toLowerCase() === 'mudah' ? 'bg-green-100 text-green-700' : 
+                            (q.difficulty?.toLowerCase() === 'menengah' || q.difficulty?.toLowerCase() === 'sedang') ? 'bg-yellow-100 text-yellow-700' : 
                             'bg-red-100 text-red-700'
                           }`}>
                             {q.difficulty}
@@ -952,14 +968,14 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
                   <form id="questionForm" onSubmit={handleSaveQuestion} className="space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="space-y-2">
-                        <label className="block text-text-heading font-label-md">Topik / Modul *</label>
+                        <label className="block text-text-heading font-label-md">Materi *</label>
                         <select
                           required
                           value={questionForm.topic}
                           onChange={(e) => setQuestionForm({...questionForm, topic: e.target.value, subtopic: ''})}
                           className="w-full bg-surface border border-border-subtle rounded-xl px-4 py-3 font-body-md focus:outline-none focus:ring-2 focus:ring-secondary/50 focus:border-secondary transition-all"
                         >
-                          <option value="" disabled>Pilih Topik...</option>
+                          <option value="" disabled>Pilih Materi...</option>
                           {curriculumTopics.map(t => (
                             <option key={t.id} value={t.name}>{t.name}</option>
                           ))}
@@ -974,9 +990,19 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
                           disabled={!questionForm.topic}
                         >
                           <option value="">Pilih Submateri...</option>
-                          {curriculumTopics.find(t => t.name === questionForm.topic)?.subtopics.map(s => (
-                            <option key={s.id} value={s.title}>{s.title}</option>
-                          ))}
+                          {(() => {
+                            const availableSubtopics = curriculumTopics.find(t => t.name === questionForm.topic)?.subtopics.map(s => s.title) || [];
+                            const options = availableSubtopics.map(title => (
+                              <option key={title} value={title}>{title}</option>
+                            ));
+                            
+                            // If the question has a subtopic that isn't in the current curriculum (like from legacy data), 
+                            // we show it as an option so it doesn't appear blank
+                            if (questionForm.subtopic && !availableSubtopics.includes(questionForm.subtopic)) {
+                              options.push(<option key={questionForm.subtopic} value={questionForm.subtopic}>{questionForm.subtopic} (Tidak Terdaftar)</option>);
+                            }
+                            return options;
+                          })()}
                         </select>
                       </div>
                     </div>

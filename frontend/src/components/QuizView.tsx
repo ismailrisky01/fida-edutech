@@ -24,6 +24,7 @@ export const QuizView: React.FC<QuizViewProps> = ({
   const [loading, setLoading] = useState(true);
   const [currentIdx, setCurrentIdx] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState<Record<number, number>>({});
+  const [submittedAnswers, setSubmittedAnswers] = useState<Record<number, boolean>>({});
   const [quizFinished, setQuizFinished] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [score, setScore] = useState(0);
@@ -144,23 +145,6 @@ export const QuizView: React.FC<QuizViewProps> = ({
             </h3>
           </div>
 
-          {/* AI Cache Indicator Badge */}
-          {source && (
-            <div className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm border ${
-              source === 'cache' 
-                ? 'bg-green-50 text-green-700 border-green-200' 
-                : 'bg-purple-50 text-purple-700 border-purple-200 animate-pulse'
-            }`}
-            title={source === 'cache' ? 'Soal diambil dari cache database, menghemat token AI!' : 'Soal baru di-generate secara real-time oleh AI.'}
-            >
-              <span className="material-symbols-outlined text-[16px]">
-                {source === 'cache' ? 'database' : 'psychology'}
-              </span>
-              <span>
-                {source === 'cache' ? 'Cache HIT (Hemat Token)' : 'Cache MISS (AI Gen)'}
-              </span>
-            </div>
-          )}
         </div>
 
         {/* Main Quiz Flow */}
@@ -193,22 +177,38 @@ export const QuizView: React.FC<QuizViewProps> = ({
               {currentQuestion.options.map((option, idx) => {
                 const isSelected = selectedAnswers[currentIdx] === idx;
                 const letter = String.fromCharCode(65 + idx); // A, B, C, D
+                
+                let btnClass = isSelected
+                  ? 'border-secondary bg-secondary/5 font-semibold text-secondary ring-1 ring-secondary'
+                  : 'border-border-subtle hover:bg-slate-50 text-text-body';
+                let letterClass = isSelected 
+                  ? 'bg-secondary text-white' 
+                  : 'bg-slate-100 text-text-muted group-hover:bg-slate-200';
+
+                const isSubmitted = type === 'practice' && submittedAnswers[currentIdx];
+                const isCorrectOption = idx === currentQuestion.correctOptionIndex;
+
+                if (isSubmitted) {
+                  if (isCorrectOption) {
+                    btnClass = 'border-green-500 bg-green-50 font-semibold text-green-700 ring-1 ring-green-500';
+                    letterClass = 'bg-green-500 text-white';
+                  } else if (isSelected && !isCorrectOption) {
+                    btnClass = 'border-red-500 bg-red-50 font-semibold text-red-700 ring-1 ring-red-500';
+                    letterClass = 'bg-red-500 text-white';
+                  } else {
+                    btnClass = 'border-border-subtle text-text-muted opacity-60';
+                    letterClass = 'bg-slate-100 text-text-muted';
+                  }
+                }
 
                 return (
                   <button
                     key={idx}
                     onClick={() => handleSelectOption(idx)}
-                    className={`w-full p-4 rounded-xl border text-left flex items-center gap-3 transition-all ${
-                      isSelected
-                        ? 'border-secondary bg-secondary/5 font-semibold text-secondary ring-1 ring-secondary'
-                        : 'border-border-subtle hover:bg-slate-50 text-text-body'
-                    }`}
+                    disabled={isSubmitted}
+                    className={`w-full p-4 rounded-xl border text-left flex items-center gap-3 transition-all group ${btnClass}`}
                   >
-                    <span className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold transition-all ${
-                      isSelected 
-                        ? 'bg-secondary text-white' 
-                        : 'bg-slate-100 text-text-muted group-hover:bg-slate-200'
-                    }`}>
+                    <span className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold transition-all ${letterClass}`}>
                       {letter}
                     </span>
                     <span className="text-sm">{option}</span>
@@ -216,6 +216,19 @@ export const QuizView: React.FC<QuizViewProps> = ({
                 );
               })}
             </div>
+
+            {/* Explanation for Practice Mode */}
+            {type === 'practice' && submittedAnswers[currentIdx] && (
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-5 mt-2">
+                <h5 className="font-bold text-blue-800 text-sm mb-2 flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[18px]">lightbulb</span>
+                  Pembahasan
+                </h5>
+                <p className="text-sm text-blue-900 leading-relaxed whitespace-pre-wrap">
+                  {currentQuestion.explanation || 'Pembahasan tidak tersedia.'}
+                </p>
+              </div>
+            )}
 
             {/* Footer Buttons */}
             <div className="flex justify-between items-center border-t border-border-subtle pt-6">
@@ -228,16 +241,29 @@ export const QuizView: React.FC<QuizViewProps> = ({
                 Sebelumnya
               </button>
 
-              <button
-                onClick={handleNext}
-                disabled={!isAnswered}
-                className={`px-6 py-2.5 rounded-xl text-white font-bold text-sm shadow-md hover:scale-[1.02] transition-all flex items-center gap-1.5 ${
-                  isAnswered ? 'bg-secondary hover:bg-secondary/95' : 'bg-slate-300 cursor-not-allowed shadow-none'
-                }`}
-              >
-                {currentIdx === questions.length - 1 ? 'Selesai & Kumpul' : 'Selanjutnya'}
-                <span className="material-symbols-outlined text-[18px]">east</span>
-              </button>
+              {type === 'practice' && !submittedAnswers[currentIdx] ? (
+                <button
+                  onClick={() => setSubmittedAnswers({ ...submittedAnswers, [currentIdx]: true })}
+                  disabled={!isAnswered}
+                  className={`px-6 py-2.5 rounded-xl text-white font-bold text-sm shadow-md hover:scale-[1.02] transition-all flex items-center gap-1.5 ${
+                    isAnswered ? 'bg-secondary hover:bg-secondary/95' : 'bg-slate-300 cursor-not-allowed shadow-none'
+                  }`}
+                >
+                  <span className="material-symbols-outlined text-[18px]">check_circle</span>
+                  Jawab
+                </button>
+              ) : (
+                <button
+                  onClick={handleNext}
+                  disabled={!isAnswered}
+                  className={`px-6 py-2.5 rounded-xl text-white font-bold text-sm shadow-md hover:scale-[1.02] transition-all flex items-center gap-1.5 ${
+                    isAnswered ? 'bg-secondary hover:bg-secondary/95' : 'bg-slate-300 cursor-not-allowed shadow-none'
+                  }`}
+                >
+                  {currentIdx === questions.length - 1 ? 'Selesai & Kumpul' : 'Selanjutnya'}
+                  <span className="material-symbols-outlined text-[18px]">east</span>
+                </button>
+              )}
             </div>
 
           </div>

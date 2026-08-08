@@ -364,111 +364,46 @@ export const api = {
   },
 
   // Question generator & cache (Rule #4 Caching)
-  async getTestQuestions(sessionId: number, type: 'pre' | 'post' | 'practice', topic: string, difficulty: string): Promise<{ questions: Question[]; source: 'cache' | 'ai' }> {
+  async getTestQuestions(sessionId: number, type: 'pre' | 'post' | 'practice', topic: string, difficulty: string): Promise<{ questions: Question[]; source: string }> {
     const isBackendActive = await this.checkBackend();
     if (isBackendActive) {
       try {
-        const res = await fetch(`${API_BASE}/questions/get-test`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({ session_id: sessionId, type, topic, difficulty }),
+        const allQuestions = await this.getAllQuestions();
+        let filtered = allQuestions.filter(q => {
+          const qTopic = q.topic ? q.topic.toLowerCase() : '';
+          const qSubtopic = q.subtopic ? q.subtopic.toLowerCase() : '';
+          
+          if (topic.startsWith('random|')) {
+            const courseName = topic.split('|')[1].toLowerCase();
+            return qTopic === courseName || qTopic.includes(courseName) || courseName.includes(qTopic);
+          } else {
+            const searchTopic = topic ? topic.toLowerCase() : '';
+            return qTopic === searchTopic || qSubtopic === searchTopic || qTopic.includes(searchTopic) || qSubtopic.includes(searchTopic) || searchTopic.includes(qTopic) || searchTopic.includes(qSubtopic);
+          }
         });
-        if (res.ok) {
-          const data = await res.json();
-          return { questions: data.questions, source: data.source };
+
+        if (topic.startsWith('random|')) {
+          filtered = filtered.sort(() => 0.5 - Math.random()).slice(0, 25);
+        }
+
+        if (filtered.length > 0) {
+          const mappedQuestions: Question[] = filtered.map(q => ({
+            id: q.id!,
+            questionText: q.question_text,
+            options: [q.option_a, q.option_b, q.option_c, q.option_d],
+            correctOptionIndex: q.correct_option === 'A' ? 0 : q.correct_option === 'B' ? 1 : q.correct_option === 'C' ? 2 : 3,
+            explanation: q.explanation || ''
+          }));
+          
+          return { questions: mappedQuestions, source: 'database' };
         }
       } catch (e) {
         console.error(e);
       }
     }
 
-    // Mock Fallback Caching Logic (Rule #4 Simulation)
-    const cacheKey = `${topic.toLowerCase().replace(/\s+/g, '-')}-${difficulty.toLowerCase()}`;
-    const questionCache = getMockStorage('question_cache', {});
-    const cacheLogs = getMockStorage('cache_logs', []);
-
-    if (questionCache[cacheKey]) {
-      // Cache HIT!
-      cacheLogs.unshift({
-        timestamp: new Date().toLocaleTimeString(),
-        topic,
-        difficulty,
-        status: 'Cache Hit',
-        questionCount: questionCache[cacheKey].length
-      });
-      setMockStorage('cache_logs', cacheLogs.slice(0, 50));
-      return { questions: questionCache[cacheKey], source: 'cache' };
-    }
-
-    // Cache MISS!
-    // Determine template questions based on keyword
-    let generatedQuestions: Question[] = [];
-    if (topic.toLowerCase().includes('scratch') || topic.toLowerCase().includes('game') || topic.toLowerCase().includes('prog')) {
-      generatedQuestions = [
-        {
-          id: 1,
-          questionText: `[AI Generated] Pada topik "${topic}" (${difficulty}), apa yang terjadi jika blok 'forever' membungkus blok 'move 10 steps' tanpa jeda?`,
-          options: ["Sprite akan berjalan cepat dan menabrak pinggir layar selamanya", "Sprite bergerak sekali saja lalu berhenti", "Program error", "Sprite berganti kostum"],
-          correctOptionIndex: 0,
-          explanation: "Blok forever terus mengulangi perintah 'move 10 steps' terus-menerus tanpa henti."
-        },
-        {
-          id: 2,
-          questionText: `[AI Generated] Mengapa kita membutuhkan variabel dalam game Scratch yang berfokus pada "${topic}"?`,
-          options: ["Untuk mewarnai sprite", "Untuk menyimpan data dinamis seperti skor, nyawa, atau waktu", "Untuk memutar musik latar", "Untuk memperbesar ukuran sprite"],
-          correctOptionIndex: 1,
-          explanation: "Variabel menyimpan nilai yang dapat berubah-ubah selama eksekusi game seperti skor atau nyawa."
-        },
-        {
-          id: 3,
-          questionText: `[AI Generated] Blok kontrol manakah yang paling sesuai untuk mendeteksi tabrakan sprite dalam materi "${topic}"?`,
-          options: ["wait 1 seconds", "when green flag clicked", "if <touching sprite?> then", "set size to 100%"],
-          correctOptionIndex: 2,
-          explanation: "Blok 'if-then' dikombinasikan dengan sensing 'touching sprite' digunakan untuk mendeteksi kolisi/tabrakan."
-        }
-      ];
-    } else {
-      // Default to math
-      generatedQuestions = [
-        {
-          id: 1,
-          questionText: `[AI Generated] Dalam topik "${topic}" (${difficulty}), jika sebuah kotak memiliki panjang 5cm dan lebar 8cm, berapakah luasnya?`,
-          options: ["13 cm²", "40 cm²", "26 cm²", "80 cm²"],
-          correctOptionIndex: 1,
-          explanation: "Luas persegi panjang dihitung dengan panjang x lebar = 5 x 8 = 40 cm²."
-        },
-        {
-          id: 2,
-          questionText: `[AI Generated] Budi menyelesaikan kuis "${topic}" dalam 15 menit. Andi menyelesaikannya dalam waktu 1/3 dari waktu Budi ditambah 5 menit. Berapa lama Andi menyelesaikan kuis?`,
-          options: ["5 menit", "10 menit", "15 menit", "20 menit"],
-          correctOptionIndex: 1,
-          explanation: "Waktu Andi = (1/3 dari 15) + 5 = 5 + 5 = 10 menit."
-        },
-        {
-          id: 3,
-          questionText: `[AI Generated] Manakah dari berikut ini yang merupakan penalaran logis terbaik untuk memecahkan masalah dalam "${topic}"?`,
-          options: ["Menebak jawaban acak", "Membaca soal dengan cepat", "Mengidentifikasi pola, membuat hipotesis, dan memverifikasi", "Menyalin jawaban teman"],
-          correctOptionIndex: 2,
-          explanation: "Pemecahan masalah sistematis melibatkan penemuan pola, merancang hipotesis logika, dan memverifikasi hasil."
-        }
-      ];
-    }
-
-    // Save to Cache
-    questionCache[cacheKey] = generatedQuestions;
-    setMockStorage('question_cache', questionCache);
-
-    cacheLogs.unshift({
-      timestamp: new Date().toLocaleTimeString(),
-      topic,
-      difficulty,
-      status: 'Cache Miss (AI Gen)',
-      questionCount: generatedQuestions.length
-    });
-    setMockStorage('cache_logs', cacheLogs.slice(0, 50));
-
-    return { questions: generatedQuestions, source: 'ai' };
+    // Fallback if no questions found or backend offline
+    return { questions: [], source: 'database' };
   },
 
   // Save scores & update progress
@@ -935,7 +870,7 @@ export const api = {
     }
   },
 
-  async importQuestionsJson(file: File): Promise<{message: string, count: number} | null> {
+  async importQuestionsJson(file: File): Promise<{message: string, count: number, skipped?: number} | null> {
     const isBackendActive = await this.checkBackend();
     if (isBackendActive) {
       try {

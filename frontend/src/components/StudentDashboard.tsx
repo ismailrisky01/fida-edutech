@@ -31,13 +31,14 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
   const [viewMode, setViewMode] = useState<'overview' | 'learning'>('overview');
 
   // State untuk form latihan
-  const [practiceCourseId, setPracticeCourseId] = useState<number | null>(selectedCourseId || courses[0]?.id || null);
+  const [practiceCourseId, setPracticeCourseId] = useState<number | null>(null);
   const [practiceSessionId, setPracticeSessionId] = useState<number | null>(null);
-  const [practiceDifficulty, setPracticeDifficulty] = useState<string>('Mudah');
+  const [isRandomPractice, setIsRandomPractice] = useState<boolean>(false);
   const [practiceSessions, setPracticeSessions] = useState<Session[]>([]);
 
   useEffect(() => {
     const fetchPracticeSessions = async () => {
+      if (!practiceCourseId) return;
       const data = await api.getSessions(practiceCourseId as number);
       setPracticeSessions(data);
       if (data.length > 0) {
@@ -503,59 +504,64 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
 
               <div className="max-w-xl mx-auto w-full flex flex-col gap-5">
                 <div className="flex flex-col gap-2">
-                  <label className="text-sm font-bold text-text-heading">Mata Pelajaran</label>
+                  <label className="text-sm font-bold text-text-heading">Materi</label>
                   <select 
                     value={practiceCourseId || ''}
                     onChange={(e) => setPracticeCourseId(Number(e.target.value))}
                     className="w-full p-3.5 rounded-xl border border-border-subtle bg-slate-50 font-semibold focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary/50"
                   >
+                    <option value="" disabled hidden>Pilih Materi...</option>
                     {courses.map(c => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
+                      <option key={c.id} value={c.id}>{c.topicName || c.name}</option>
                     ))}
                   </select>
                 </div>
 
-                <div className="flex flex-col gap-2">
-                  <label className="text-sm font-bold text-text-heading">Materi / Modul</label>
+                <div className="flex items-center gap-3 bg-slate-50 border border-border-subtle p-3.5 rounded-xl cursor-pointer hover:bg-slate-100 transition-colors" onClick={() => setIsRandomPractice(!isRandomPractice)}>
+                  <input 
+                    type="checkbox" 
+                    checked={isRandomPractice} 
+                    onChange={() => {}} 
+                    className="w-5 h-5 rounded text-secondary focus:ring-secondary/50 cursor-pointer"
+                  />
+                  <label className="text-sm font-semibold text-text-heading cursor-pointer select-none">
+                    Acak Soal (25 Soal Random dari Materi Ini)
+                  </label>
+                </div>
+
+                <div className={`flex flex-col gap-2 transition-opacity ${isRandomPractice ? 'opacity-50 pointer-events-none' : ''}`}>
+                  <label className="text-sm font-bold text-text-heading">Submateri</label>
                   <select 
                     value={practiceSessionId || ''}
                     onChange={(e) => setPracticeSessionId(Number(e.target.value))}
-                    disabled={practiceSessions.length === 0}
+                    disabled={practiceSessions.length === 0 || isRandomPractice}
                     className="w-full p-3.5 rounded-xl border border-border-subtle bg-slate-50 font-semibold focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary/50 disabled:opacity-50"
                   >
+                    <option value="" disabled hidden>Pilih Submateri...</option>
                     {practiceSessions.map(s => (
                       <option key={s.id} value={s.id}>{s.title}</option>
                     ))}
                   </select>
                 </div>
 
-                <div className="flex flex-col gap-2">
-                  <label className="text-sm font-bold text-text-heading">Tingkat Kesulitan</label>
-                  <div className="grid grid-cols-3 gap-3">
-                    {['Mudah', 'Menengah', 'Sulit'].map(level => (
-                      <button
-                        key={level}
-                        onClick={() => setPracticeDifficulty(level)}
-                        className={`py-3 rounded-xl border font-bold text-sm transition-all ${
-                          practiceDifficulty === level 
-                            ? 'bg-secondary text-white border-secondary shadow-md' 
-                            : 'bg-white text-text-muted border-border-subtle hover:bg-slate-50'
-                        }`}
-                      >
-                        {level}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
                 <button
                   onClick={() => {
-                    const selectedSessionObj = practiceSessions.find(s => s.id === practiceSessionId);
-                    if (practiceSessionId && selectedSessionObj) {
-                      onStartQuiz(practiceSessionId, 'practice', selectedSessionObj.title, practiceDifficulty);
+                    let finalTopic = '';
+                    let sessionIdToPass = practiceSessionId;
+                    if (isRandomPractice) {
+                      const course = courses.find(c => c.id === practiceCourseId);
+                      finalTopic = course ? `random|${course.topicName || course.name}` : 'random';
+                      // Pass -1 or a dummy session ID since we are randomizing across the course
+                      sessionIdToPass = -1;
+                    } else {
+                      const selectedSessionObj = practiceSessions.find(s => s.id === practiceSessionId);
+                      finalTopic = selectedSessionObj ? selectedSessionObj.title : '';
+                    }
+                    if (sessionIdToPass !== null && finalTopic) {
+                      onStartQuiz(sessionIdToPass, 'practice', finalTopic, '');
                     }
                   }}
-                  disabled={!practiceSessionId}
+                  disabled={(!isRandomPractice && !practiceSessionId) || (isRandomPractice && !practiceCourseId)}
                   className="mt-6 w-full py-4 rounded-xl bg-green-600 hover:bg-green-700 text-white font-extrabold text-lg shadow-md hover:scale-[1.02] transition-all disabled:opacity-50 disabled:hover:scale-100"
                 >
                   Mulai Latihan
