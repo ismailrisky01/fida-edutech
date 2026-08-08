@@ -865,5 +865,98 @@ export const api = {
         console.error(e);
       }
     }
+  },
+
+  // === Question Bank (CRUD) ===
+  async getAllQuestions(): Promise<ManualQuestion[]> {
+    const isBackendActive = await this.checkBackend();
+    if (isBackendActive) {
+      try {
+        const res = await fetch(`${API_BASE}/questions`, {
+          credentials: 'include'
+        });
+        if (res.ok) {
+          return await res.json();
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    return [];
+  },
+
+  async createQuestion(data: Omit<ManualQuestion, 'id' | 'created_at'>): Promise<ManualQuestion | null> {
+    const isBackendActive = await this.checkBackend();
+    if (isBackendActive) {
+      try {
+        const res = await fetch(`${API_BASE}/questions`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify(data),
+        });
+        if (res.ok) return await res.json();
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    return null;
+  },
+
+  async updateQuestion(id: number, data: Partial<ManualQuestion>): Promise<ManualQuestion | null> {
+    const isBackendActive = await this.checkBackend();
+    if (isBackendActive) {
+      try {
+        const res = await fetch(`${API_BASE}/questions/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify(data),
+        });
+        if (res.ok) return await res.json();
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    return null;
+  },
+
+  async deleteQuestion(id: number): Promise<void> {
+    const isBackendActive = await this.checkBackend();
+    if (isBackendActive) {
+      try {
+        await fetch(`${API_BASE}/questions/${id}`, {
+          method: 'DELETE',
+          credentials: 'include'
+        });
+      } catch (e) {
+        console.error(e);
+      }
+    }
+  },
+
+  async importQuestionsJson(file: File): Promise<{message: string, count: number} | null> {
+    const isBackendActive = await this.checkBackend();
+    if (isBackendActive) {
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        const res = await fetch(`${API_BASE}/questions/import`, {
+          method: 'POST',
+          credentials: 'include',
+          body: formData,
+        });
+        if (res.ok) {
+          return await res.json();
+        } else {
+          const err = await res.json();
+          alert(`Error: ${err.detail}`);
+        }
+      } catch (e) {
+        console.error(e);
+        alert('Gagal mengimport file. Pastikan server berjalan dan format JSON benar.');
+      }
+    }
+    return null;
   }
 };

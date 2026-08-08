@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 import os
 from .models.database import init_db
-from .routers import auth, classes, ai_questions, teacher, courses
+from .routers import auth, classes, ai_questions, teacher, courses, questions
 
 # Create uploads directory if not exists
 os.makedirs("uploads/materials", exist_ok=True)
@@ -34,6 +34,7 @@ app.include_router(classes.router, prefix="/api")
 app.include_router(ai_questions.router, prefix="/api")
 app.include_router(teacher.router, prefix="/api")
 app.include_router(courses.router, prefix="/api")
+app.include_router(questions.router, prefix="/api")
 
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
