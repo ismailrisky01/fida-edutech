@@ -1,7 +1,7 @@
 import type { User, Course, Session, Question, StudentProgress, ZoomMeeting, ManualQuestion, Topic, Subtopic } from '../types';
 
-// Make API_BASE dynamic based on the current hostname (useful if accessed via local IP)
-const API_BASE = `http://${window.location.hostname}:8000/api`;
+// Use VITE_API_URL from environment if available, otherwise default to localhost for development
+const API_BASE = import.meta.env.VITE_API_URL || `http://${window.location.hostname}:8000/api`;
 
 // Pre-seeded questions for caching demo and fallback
 export const DEFAULT_QUESTIONS: Record<string, Question[]> = {
