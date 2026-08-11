@@ -5,8 +5,11 @@ import os
 from .models.database import init_db
 from .routers import auth, classes, ai_questions, teacher, courses, questions
 
-# Create uploads directory if not exists
-os.makedirs("uploads/materials", exist_ok=True)
+# Create uploads directory if not exists (handling read-only serverless environments)
+try:
+    os.makedirs("uploads/materials", exist_ok=True)
+except OSError:
+    pass
 
 app = FastAPI(
     title="Fida-Education LMS API",
@@ -14,10 +17,10 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# CORS configurations for local frontend (Vite React app)
+# CORS configurations for local frontend and Vercel production
 app.add_middleware(
     CORSMiddleware,
-    allow_origin_regex=r"^http://(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+)(:\d+)?$",
+    allow_origins=["*"], # In production, restrict this to your frontend URL if needed
     allow_credentials=True, # Required for HTTP-Only Cookie transport
     allow_methods=["*"],
     allow_headers=["*"],
