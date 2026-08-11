@@ -80,7 +80,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 onClick={onOpenAuth}
                 className="px-6 py-2.5 rounded-xl font-label-md bg-primary-container text-white hover:scale-105 transition-transform duration-200 shadow-md"
               >
-                Masuk / Daftar
+                Masuk
               </button>
             )}
           </div>
@@ -104,7 +104,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   <button onClick={onLogout} className="w-full text-center py-2.5 rounded-xl border border-error text-error hover:bg-error/5 font-semibold">Keluar</button>
                 </div>
               ) : (
-                <button onClick={onOpenAuth} className="w-full text-center py-2.5 rounded-xl bg-primary-container text-white font-semibold shadow-sm">Masuk / Daftar</button>
+                <button onClick={onOpenAuth} className="w-full text-center py-2.5 rounded-xl bg-primary-container text-white font-semibold shadow-sm">Masuk</button>
               )}
             </div>
           </div>
@@ -114,9 +114,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       <main className="flex-grow">
         {/* Hero Section */}
         <section 
-          className="max-w-container-max mx-auto px-4 md:px-8 flex flex-col items-center text-center justify-center relative"
+          className="w-full px-4 md:px-8 flex flex-col items-center text-center justify-center relative"
           style={{
-            backgroundImage: `linear-gradient(rgba(247, 249, 251, 0.9), rgba(247, 249, 251, 0.9)), url("https://lh3.googleusercontent.com/aida/AP1WRLtS6yp86xQQDQfXD0f_yaXm6zkIVLAp051YFj9Wt4VUvppaCIJPXpqMh_I8Oy_Zsh94LSwpIkeCfTe4nQwHEgsFXL31trO0tgqoT2UC0oKNS4DdonSopL1Nbvv74NgkSitGPUyT6WsEnEVK0BflSfmRwTryS0ZTAYPVxYnwBEi4bd5wHpfPf5FQVT5LHtZDnVAecKo6bFE1eSa72JzVpwMyWC5K00T7AYp7PYrHs4L4JmA2n3Ybj5Xru58p")`,
+            backgroundImage: `linear-gradient(rgba(247, 249, 251, 0.75), rgba(247, 249, 251, 0.85)), url("/bg_dashboard.png")`,
             backgroundSize: 'cover',
             backgroundPosition: 'center center',
             minHeight: '600px'
@@ -151,7 +151,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         </section>
 
         {/* Courses Grid */}
-        <section id="paket" className="max-w-container-max mx-auto px-4 md:px-8 py-20 bg-white rounded-3xl shadow-sm border border-border-subtle mb-16">
+        <section id="paket" className="max-w-container-max mx-auto px-4 md:px-8 py-20 mt-16 bg-white rounded-3xl shadow-sm border border-border-subtle mb-16">
           <div className="text-center mb-16">
             <h2 className="font-headline-lg text-headline-lg text-text-heading font-extrabold text-3xl mb-4">Pilihan Paket Belajar</h2>
             <p className="font-body-md text-body-md text-text-muted max-w-lg mx-auto">Dirancang khusus untuk menyesuaikan tingkat pemahaman anak di setiap tingkatannya.</p>

@@ -190,7 +190,14 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
                 /* --- TAMPILAN OVERVIEW --- */
                 <div className="flex flex-col gap-6">
                   {/* Hero / Welcome Banner */}
-                  <div className="bg-secondary/10 rounded-3xl p-8 flex flex-col md:flex-row justify-between items-center gap-6 border border-secondary/20">
+                  <div 
+                    className="rounded-3xl p-8 flex flex-col md:flex-row justify-between items-center gap-6 border border-secondary/20"
+                    style={{
+                      backgroundImage: 'linear-gradient(rgba(240, 244, 255, 0.85), rgba(240, 244, 255, 0.85)), url("/bg_dashboard.png")',
+                      backgroundSize: 'cover',
+                      backgroundPosition: 'center'
+                    }}
+                  >
                     <div>
                       <h2 className="text-3xl font-extrabold text-secondary mb-2">Selamat Datang, {currentUser.name}!</h2>
                       <p className="text-secondary/80 font-medium">Siap untuk melanjutkan petualangan belajarmu hari ini?</p>

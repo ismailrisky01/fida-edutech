@@ -16,6 +16,8 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
   const [activeTab, setActiveTab] = useState<'dashboard' | 'students' | 'classes' | 'question-bank' | 'curriculum'>('dashboard');
   const [students, setStudents] = useState<StudentProgress[]>([]);
   const [selectedStudent, setSelectedStudent] = useState<StudentProgress | null>(null);
+  const [isAddStudentModalOpen, setIsAddStudentModalOpen] = useState(false);
+  const [addStudentForm, setAddStudentForm] = useState({ name: '', email: '', password: '' });
 
   // Active Classes state
   const [activeClasses, setActiveClasses] = useState<ActiveClass[]>([]);
@@ -251,6 +253,21 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
     }
   };
 
+  const handleCreateStudent = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!addStudentForm.name || !addStudentForm.email || !addStudentForm.password) return;
+    
+    const res = await api.register(addStudentForm.name, addStudentForm.email, addStudentForm.password, 'student');
+    if (res.success) {
+      setAddStudentForm({ name: '', email: '', password: '' });
+      setIsAddStudentModalOpen(false);
+      await fetchData();
+      alert('Berhasil menambahkan siswa baru!');
+    } else {
+      alert(res.error || 'Gagal menambahkan siswa.');
+    }
+  };
+
   const handleCreateClass = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!classForm.name || !classForm.topicId) return;
@@ -465,7 +482,14 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
           {activeTab === 'dashboard' && (
             <div className="space-y-6 md:space-y-8">
               {/* Welcome Banner */}
-              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-[1.5rem] p-6 md:p-8 border border-border-subtle shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-6 relative overflow-hidden">
+              <div 
+                className="rounded-[1.5rem] p-6 md:p-8 border border-border-subtle shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-6 relative overflow-hidden"
+                style={{
+                  backgroundImage: 'linear-gradient(rgba(239, 246, 255, 0.85), rgba(224, 231, 255, 0.85)), url("/bg_dashboard.png")',
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center'
+                }}
+              >
                 <div className="absolute -right-10 -top-10 w-40 h-40 bg-secondary/5 rounded-full blur-2xl pointer-events-none"></div>
                 <div className="absolute right-20 -bottom-10 w-32 h-32 bg-primary-container/10 rounded-full blur-xl pointer-events-none"></div>
                 <div className="relative z-10 space-y-3">
@@ -520,10 +544,18 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
             <div className="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden hover:shadow-md transition-shadow duration-300">
               <div className="h-2 bg-secondary w-full"></div>
               <div className="p-6 md:p-8">
-                <h2 className="font-headline-md text-text-heading mb-6 flex items-center gap-2">
-                  <span className="material-symbols-outlined text-[20px] text-text-muted">group</span>
-                  Daftar Siswa
-                </h2>
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="font-headline-md text-text-heading flex items-center gap-2">
+                    <span className="material-symbols-outlined text-[20px] text-text-muted">group</span>
+                    Daftar Siswa
+                  </h2>
+                  <button 
+                    onClick={() => setIsAddStudentModalOpen(true)} 
+                    className="px-4 py-2 bg-primary text-white text-sm rounded-xl font-label-md hover:scale-[1.02] transition-transform shadow-sm flex items-center gap-2"
+                  >
+                    <span className="material-symbols-outlined text-[18px]">add</span> Tambah Siswa
+                  </button>
+                </div>
                 <div className="flex flex-col divide-y divide-border-subtle">
                   {groupedStudents.map(gs => {
                     const allPreScores = gs.courses.filter(c => c.averagePreScore > 0).map(c => c.averagePreScore);
@@ -635,6 +667,77 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
                       </div>
                     ))}
                   </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Modal Tambah Siswa */}
+          {isAddStudentModalOpen && (
+            <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+              <div className="bg-surface-container-lowest rounded-3xl w-full max-w-md shadow-2xl flex flex-col">
+                <div className="p-6 md:p-8 border-b border-border-subtle flex justify-between items-center bg-surface shrink-0 rounded-t-3xl">
+                  <h3 className="font-headline-sm text-text-heading flex items-center gap-2">
+                    <span className="material-symbols-outlined text-[20px]">person_add</span> Tambah Akun Siswa
+                  </h3>
+                  <button onClick={() => setIsAddStudentModalOpen(false)} className="text-text-muted hover:text-text-heading rounded-full p-2 hover:bg-surface-container-highest transition-colors">
+                    <span className="material-symbols-outlined">close</span>
+                  </button>
+                </div>
+                
+                <div className="p-6 md:p-8 overflow-y-auto custom-scrollbar">
+                  <form id="addStudentForm" onSubmit={handleCreateStudent} className="space-y-4">
+                    <div className="space-y-2">
+                      <label className="block text-text-heading font-label-md">Nama Lengkap *</label>
+                      <input
+                        type="text"
+                        required
+                        value={addStudentForm.name}
+                        onChange={(e) => setAddStudentForm({...addStudentForm, name: e.target.value})}
+                        className="w-full bg-surface border border-border-subtle rounded-xl px-4 py-3 font-body-md focus:outline-none focus:ring-2 focus:ring-secondary/50 focus:border-secondary transition-all"
+                        placeholder="Nama Siswa"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="block text-text-heading font-label-md">Email *</label>
+                      <input
+                        type="email"
+                        required
+                        value={addStudentForm.email}
+                        onChange={(e) => setAddStudentForm({...addStudentForm, email: e.target.value})}
+                        className="w-full bg-surface border border-border-subtle rounded-xl px-4 py-3 font-body-md focus:outline-none focus:ring-2 focus:ring-secondary/50 focus:border-secondary transition-all"
+                        placeholder="siswa@email.com"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="block text-text-heading font-label-md">Password *</label>
+                      <input
+                        type="password"
+                        required
+                        value={addStudentForm.password}
+                        onChange={(e) => setAddStudentForm({...addStudentForm, password: e.target.value})}
+                        className="w-full bg-surface border border-border-subtle rounded-xl px-4 py-3 font-body-md focus:outline-none focus:ring-2 focus:ring-secondary/50 focus:border-secondary transition-all"
+                        placeholder="••••••••"
+                      />
+                    </div>
+                  </form>
+                </div>
+                
+                <div className="p-6 md:p-8 border-t border-border-subtle flex justify-end gap-3 bg-surface shrink-0 rounded-b-3xl">
+                  <button
+                    type="button"
+                    onClick={() => setIsAddStudentModalOpen(false)}
+                    className="px-6 py-2.5 rounded-full font-label-md text-text-muted hover:bg-surface-container-highest transition-colors"
+                  >
+                    Batal
+                  </button>
+                  <button
+                    type="submit"
+                    form="addStudentForm"
+                    className="bg-primary hover:bg-primary-hover text-white px-8 py-2.5 rounded-full font-label-md transition-colors"
+                  >
+                    Tambah
+                  </button>
                 </div>
               </div>
             </div>
